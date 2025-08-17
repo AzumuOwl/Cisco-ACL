@@ -1,0 +1,64 @@
+! ================================
+! Router 1 Configuration
+! ================================
+hostname R1
+no ip domain-lookup
+enable secret cisco123
+
+! Interfaces
+interface GigabitEthernet0/0
+ description LAN A
+ ip address 192.168.1.1 255.255.255.0
+ no shutdown
+
+interface GigabitEthernet0/1
+ description LAN B
+ ip address 10.10.10.1 255.255.255.0
+ no shutdown
+
+interface GigabitEthernet0/2
+ description LAN C
+ ip address 192.168.2.1 255.255.255.0
+ no shutdown
+
+! ================================
+! Standard ACL
+! อนุญาต LAN A ผ่าน
+! ================================
+access-list 1 permit 192.168.1.0 0.0.0.255
+
+! Apply Standard ACL to Gi0/0 inbound
+interface GigabitEthernet0/0
+ ip access-group 1 in
+
+! ================================
+! Extended ACL
+! อนุญาต HTTP จาก LAN A ไป LAN B
+! ปฏิเสธ Telnet จาก LAN A ไป LAN B
+! อนุญาต traffic อื่น ๆ ทั้งหมด
+! ================================
+access-list 110 permit tcp 192.168.1.0 0.0.0.255 10.10.10.0 0.0.0.255 eq 80
+access-list 110 deny tcp 192.168.1.0 0.0.0.255 10.10.10.0 0.0.0.255 eq 23
+access-list 110 permit ip any any
+
+! Apply Extended ACL to Gi0/1 inbound
+interface GigabitEthernet0/1
+ ip access-group 110 in
+
+! ================================
+! Named Extended ACL
+! Web Traffic Allow, Telnet Deny
+! ================================
+ip access-list extended WEB-TRAFFIC
+ permit tcp 192.168.2.0 0.0.0.255 any eq 80
+ deny tcp 192.168.2.0 0.0.0.255 any eq 23
+ permit ip any any
+
+! Apply Named ACL to Gi0/2 inbound
+interface GigabitEthernet0/2
+ ip access-group WEB-TRAFFIC in
+
+! ================================
+! Routing (Optional)
+! ================================
+ip route 0.0.0.0 0.0.0.0 10.10.10.254
